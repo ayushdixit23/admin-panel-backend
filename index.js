@@ -1,44 +1,70 @@
 const express = require("express");
-const app = express();
+const http = require("http");
+const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 
-//import routes
-
-const adminRoutes = require("./routes/admin");
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*", // Allow all origins (You can restrict it by specifying a URL)
+    methods: ["GET", "POST"]
+  }
+});
 
 require("dotenv").config();
 
-//middlewares
+// Import routes
+const adminRoutes = require("./routes/admin");
+
+// Middlewares
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 app.use("/api", adminRoutes);
 
-//connect to DB
+// Connect to MongoDB
 const connectDB = async () => {
   try {
     mongoose.set("strictQuery", false);
-    mongoose.connect(process.env.PRODDB).then(() => {
-      console.log("DB is connected");
-    });
+    await mongoose.connect(process.env.PRODDB);
+    console.log("DB is connected");
   } catch (err) {
-    console.log(err);
+    console.error("DB connection error:", err);
   }
 };
 
 connectDB();
 
+// Socket.io handling
+io.on("connection", (socket) => {
+  console.log("New client connected:", socket.id);
+
+  // Listen for custom events
+  socket.on("user-added", (data) => {
+    console.log(data)
+    socket.emit("audio-user", data)
+  });
+
+  // Disconnect event
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
+// Start server
 const connectApp = () => {
   try {
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log(`Server is running on ${process.env.PORT}`);
     });
   } catch (error) {
-    console.log(error);
+    console.error("Server start error:", error);
   }
 };
+
 connectApp();
