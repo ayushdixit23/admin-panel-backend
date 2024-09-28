@@ -571,14 +571,27 @@ function generateRefreshToken(data) {
   return refresh_token;
 }
 
+// const pass = async () => {
+
+//   const a = await User.findOne({ email: "fsayush100@gmail.com" })
+//   const pas = await encryptaes("Ayush@23")
+//   a.passw = pas
+//   await a.save()
+//   console.log("first", a.fullname)
+// }
+
+// pass()
+
 exports.adminlogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     const admins = [
       "traceit241@gmail.com",
       "divysharma6306@gmail.com",
+      "theshreyanshsingh7@gmail.com",
       "fsayush100@gmail.com",
       "aryansh@gmail.com",
+      "genshinaryansh@gmail.com",
     ];
     if (!admins.includes(email)) {
       return res.status(409).json({
@@ -1798,137 +1811,290 @@ exports.allproductApprovals = async (req, res) => {
   }
 };
 
+// exports.dashboard = async (req, res) => {
+//   try {
+//     const monetization = await Montenziation.find({ status: "pending" }).limit(
+//       3
+//     );
+
+//     let community = [];
+
+//     for (let i = 0; i < monetization?.length; i++) {
+//       comm = await Community.findById(monetization[i]?.community.toString());
+//       const user = await User.findById(comm?.creator);
+
+//       const mon = await Montenziation.findOne({ community: comm?._id });
+
+//       const posts = await Post.find({ community: comm?._id });
+
+//       let eng = [];
+//       await posts?.map((p, i) => {
+//         let final =
+//           p.views <= 0 ? 0 : (parseInt(p?.likes) / parseInt(p?.views)) * 100;
+//         eng.push(final);
+//       });
+
+//       let sum = 0;
+//       for (let i = 0; i < eng?.length; i++) {
+//         sum += eng[i];
+//       }
+//       let avg = 0;
+
+//       if (eng.length > 0) {
+//         avg = Math.round(sum / eng?.length);
+//       } else {
+//         avg = 0;
+//       }
+
+//       const data = {
+//         username: user?.username,
+//         fullname: user?.fullname,
+//         profilepic: process.env.URL + user?.profilepic,
+//         userid: user?._id,
+//         requested: mon?.createdAt,
+//         title: comm?.title,
+//         dp: process.env.URL + comm?.dp,
+//         topics: comm?.topics.length,
+//         posts: comm?.totalposts,
+//         members: comm?.memberscount,
+//         category: comm?.category,
+//         id: comm?._id,
+//         createdAt: comm?.createdAt,
+//         engagement: avg,
+//       };
+
+//       community.push(data);
+//     }
+
+//     const pendingRequests = await Request.find({ status: "pending" })
+//       .populate("userid", "profilepic username fullname communitycreated ")
+//       .limit(3)
+//       .lean();
+
+//     const approvedRequests = await Request.find({ status: "approved" })
+//       .populate("userid", "profilepic username fullname communitycreated ")
+//       .lean();
+
+//     const store = pendingRequests.map((request) => ({
+//       userid: request?.userid,
+//       id: request?._id,
+//       fullname: request?.userid.fullname,
+//       username: request?.userid.username,
+//       pic: process.env.URL + request?.userid.profilepic,
+//       address: request?.storeDetails,
+//       documentphoto: process.env.URL + request?.storeDetails?.documentfile,
+//       createdAt: request?.createdAt,
+//       communities: request?.userid.communitycreated.length,
+//     }));
+
+//     const product = [];
+//     for (const request of approvedRequests) {
+//       const products = await Product.find({
+//         isverified: "in review",
+//         creator: request?.userid,
+//       });
+//       const actualProducts = products.map((product) => ({
+//         id: product._id,
+//         name: product.name,
+//         dp: process.env.PRODUCT_URL + product?.images[0]?.content,
+//       }));
+
+//       if (actualProducts.length > 0) {
+
+//         const data = {
+//           id: request?._id,
+//           userid: request?.userid,
+//           fullname: request?.userid.fullname,
+//           username: request?.userid.username,
+//           pic: process.env.URL + request?.userid.profilepic,
+//           address: request?.storeDetails,
+//           products: actualProducts,
+//           documentphoto: process.env.URL + request?.storeDetails?.documentfile,
+//           createdAt: request?.createdAt,
+//           communities: request?.userid.communitycreated.length,
+//         };
+//         product.push(data);
+//       }
+//     }
+
+//     const users = await User.find().sort({ _id: -1 }).limit(200);
+//     const latestUsers = []
+//     for (let i = 0; i < users.length; i++) {
+//       const com = await Community.find({ creator: users[i]?._id })
+//       const obj = {
+//         id: users[i]._id,
+//         fullname: users[i].fullname,
+//         username: users[i].username,
+//         profilepic: process.env.URL + users[i].profilepic,
+//         email: users[i].email,
+//         phone: users[i].phone,
+//         username: users[i].username,
+//         totalCommunities: users[i].communitycreated.length,
+//         community: com.map((d) => ({ dp: process.env.URL + d?.dp, title: d?.title })),
+//         storeCreatedOrNot: users[i].storeAddress.length > 0 ? "Yes!" : "No!",
+//         address: users[i].address.streetaddress,
+//         state: users[i].address.state,
+//         city: users[i].address.city,
+//       }
+//       latestUsers.push(obj)
+//     }
+
+//     res.status(200).json({ success: true, community, product: product.slice(0, 3), store, data: latestUsers });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(400).json({ success: false, message: "Something went wrong!" });
+//   }
+// };
+
+
 exports.dashboard = async (req, res) => {
   try {
-    const monetization = await Montenziation.find({ status: "pending" }).limit(
-      3
-    );
+    // Fetch pending monetization requests
+    const monetization = await Montenziation.find({ status: "pending" }).limit(3).lean();
 
-    let community = [];
+    // Return empty arrays if no monetization requests found
 
-    for (let i = 0; i < monetization?.length; i++) {
-      comm = await Community.findById(monetization[i]?.community.toString());
-      const user = await User.findById(comm?.creator);
+    // Extract community IDs from monetization data
+    const communityIds = monetization.map(m => m?.community?.toString()).filter(Boolean);
 
-      const mon = await Montenziation.findOne({ community: comm?._id });
+    // Fetch community data based on the community IDs
+    const communities = await Community.find({ _id: { $in: communityIds } }).lean();
 
-      const posts = await Post.find({ community: comm?._id });
 
-      let eng = [];
-      await posts?.map((p, i) => {
-        let final =
-          p.views <= 0 ? 0 : (parseInt(p?.likes) / parseInt(p?.views)) * 100;
-        eng.push(final);
-      });
+    // Extract creator IDs from communities and fetch corresponding users
+    const creatorIds = communities.map(c => c?.creator?.toString()).filter(Boolean);
+    const users = await User.find({ _id: { $in: creatorIds } }).lean();
 
-      let sum = 0;
-      for (let i = 0; i < eng?.length; i++) {
-        sum += eng[i];
-      }
-      let avg = 0;
+    // Build community data
+    const communityData = await Promise.all(
+      communities.map(async (comm) => {
+        if (!comm) return null; // Ensure community exists
 
-      if (eng.length > 0) {
-        avg = Math.round(sum / eng?.length);
-      } else {
-        avg = 0;
-      }
+        const user = users.find(u => u?._id.toString() === comm?.creator?.toString());
+        if (!user) return null; // Ensure user exists
 
-      const data = {
-        username: user?.username,
-        fullname: user?.fullname,
-        profilepic: process.env.URL + user?.profilepic,
-        userid: user?._id,
-        requested: mon?.createdAt,
-        title: comm?.title,
-        dp: process.env.URL + comm?.dp,
-        topics: comm?.topics.length,
-        posts: comm?.totalposts,
-        members: comm?.memberscount,
-        category: comm?.category,
-        id: comm?._id,
-        createdAt: comm?.createdAt,
-        engagement: avg,
-      };
+        // Fetch posts related to the community
+        const posts = await Post.find({ community: comm._id }).lean();
 
-      community.push(data);
-    }
+        // Calculate engagement (likes/views ratio) for posts
+        const engagementScores = posts.map(p => (p?.views <= 0 ? 0 : (p?.likes / p?.views) * 100));
+        const avgEngagement = engagementScores.length
+          ? Math.round(engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length)
+          : 0;
 
+        // Prepare community data object
+        return {
+          username: user?.username,
+          fullname: user?.fullname,
+          profilepic: process.env.URL + (user?.profilepic || ''),
+          userid: user?._id,
+          requested: monetization.find(m => m?.community?.toString() === comm?._id?.toString())?.createdAt,
+          title: comm?.title,
+          dp: process.env.URL + (comm?.dp || ''),
+          topics: comm?.topics?.length || 0,
+          posts: comm?.totalposts || 0,
+          members: comm?.memberscount || 0,
+          category: comm?.category || 'Unknown',
+          id: comm?._id,
+          createdAt: comm?.createdAt,
+          engagement: avgEngagement,
+        };
+      })
+    ).then(data => data.filter(Boolean)); // Filter out null data
+
+    // Fetch pending requests and map to required structure
     const pendingRequests = await Request.find({ status: "pending" })
-      .populate("userid", "profilepic username fullname communitycreated ")
+      .populate("userid", "profilepic username fullname communitycreated")
       .limit(3)
       .lean();
 
-    const approvedRequests = await Request.find({ status: "approved" })
-      .populate("userid", "profilepic username fullname communitycreated ")
-      .lean();
-
     const store = pendingRequests.map((request) => ({
-      userid: request?.userid,
+      userid: request?.userid?._id,
       id: request?._id,
-      fullname: request?.userid.fullname,
-      username: request?.userid.username,
-      pic: process.env.URL + request?.userid.profilepic,
+      fullname: request?.userid?.fullname,
+      username: request?.userid?.username,
+      pic: process.env.URL + request?.userid?.profilepic,
       address: request?.storeDetails,
       documentphoto: process.env.URL + request?.storeDetails?.documentfile,
       createdAt: request?.createdAt,
-      communities: request?.userid.communitycreated.length,
+      communities: request?.userid?.communitycreated?.length || 0,
     }));
 
-    const product = [];
-    for (const request of approvedRequests) {
-      const products = await Product.find({
-        isverified: "in review",
-        creator: request?.userid,
-      });
-      const actualProducts = products.map((product) => ({
-        id: product._id,
-        name: product.name,
-        dp: process.env.PRODUCT_URL + product?.images[0]?.content,
-      }));
+    // Fetch approved requests and find related products in review
+    const approvedRequests = await Request.find({ status: "approved" })
+      .populate("userid", "profilepic username fullname communitycreated")
+      .lean();
 
-      if (actualProducts.length > 0) {
+    const product = await Promise.all(
+      approvedRequests.map(async (request) => {
+        const products = await Product.find({
+          isverified: "in review",
+          creator: request?.userid?._id,
+        }).lean();
 
-        const data = {
-          id: request?._id,
-          userid: request?.userid,
-          fullname: request?.userid.fullname,
-          username: request?.userid.username,
-          pic: process.env.URL + request?.userid.profilepic,
-          address: request?.storeDetails,
-          products: actualProducts,
-          documentphoto: process.env.URL + request?.storeDetails?.documentfile,
-          createdAt: request?.createdAt,
-          communities: request?.userid.communitycreated.length,
+        // Map products to required structure
+        const actualProducts = products.map((product) => ({
+          id: product._id,
+          name: product.name,
+          dp: process.env.PRODUCT_URL + product?.images[0]?.content,
+        }));
+
+        if (actualProducts.length > 0) {
+          return {
+            id: request?._id,
+            userid: request?.userid?._id,
+            fullname: request?.userid?.fullname,
+            username: request?.userid?.username,
+            pic: process.env.URL + request?.userid?.profilepic,
+            address: request?.storeDetails,
+            products: actualProducts,
+            documentphoto: process.env.URL + request?.storeDetails?.documentfile,
+            createdAt: request?.createdAt,
+            communities: request?.userid?.communitycreated?.length || 0,
+          };
+        } else {
+          return null;
+        }
+      })
+    ).then(data => data.filter(Boolean)); // Filter out null products
+
+    // Fetch latest 200 users
+    const usersList = await User.find().sort({ _id: -1 }).limit(200).lean();
+
+    // Map user data with community and store details
+    const latestUsersData = await Promise.all(
+      usersList.map(async (user) => {
+        const userCommunities = await Community.find({ creator: user._id }).lean();
+        return {
+          id: user._id,
+          fullname: user.fullname,
+          username: user.username,
+          profilepic: process.env.URL + user.profilepic,
+          email: user.email,
+          phone: user.phone,
+          totalCommunities: user.communitycreated?.length || 0,
+          community: userCommunities.map((comm) => ({
+            dp: process.env.URL + comm.dp,
+            title: comm.title,
+          })),
+          storeCreatedOrNot: user.storeAddress.length > 0 ? "Yes!" : "No!",
+          address: user.address?.streetaddress || '',
+          state: user.address?.state || '',
+          city: user.address?.city || '',
         };
-        product.push(data);
-      }
-    }
+      })
+    );
 
-    const users = await User.find().sort({ _id: -1 }).limit(200);
-    const latestUsers = []
-    for (let i = 0; i < users.length; i++) {
-      const com = await Community.find({ creator: users[i]?._id })
-      const obj = {
-        id: users[i]._id,
-        fullname: users[i].fullname,
-        username: users[i].username,
-        profilepic: process.env.URL + users[i].profilepic,
-        email: users[i].email,
-        phone: users[i].phone,
-        username: users[i].username,
-        totalCommunities: users[i].communitycreated.length,
-        community: com.map((d) => ({ dp: process.env.URL + d?.dp, title: d?.title })),
-        storeCreatedOrNot: users[i].storeAddress.length > 0 ? "Yes!" : "No!",
-        address: users[i].address.streetaddress,
-        state: users[i].address.state,
-        city: users[i].address.city,
-      }
-      latestUsers.push(obj)
-    }
-
-    res.status(200).json({ success: true, community, product: product.slice(0, 3), store, data: latestUsers });
+    // Send successful response with the data
+    res.status(200).json({
+      success: true,
+      community: communityData,
+      product: product.slice(0, 3), // Limit products to 3
+      store,
+      data: latestUsersData,
+    });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(400).json({ success: false, message: "Something went wrong!" });
   }
 };
@@ -2716,61 +2882,123 @@ exports.cancellationrequest = async (req, res) => {
   }
 }
 
+// exports.latestCommunities = async (req, res) => {
+//   try {
+//     const community = await Community?.find()?.sort({ _id: -1 })?.limit(100);
+//     const communityData = []
+//     for (let i = 0; i < community?.length; i++) {
+//       const posts = await Post?.find({ community: community[i]?._id });
+//       const user = await User?.findById(community[i].creator)
+
+//       let eng = [];
+//       await posts.map((p, i) => {
+//         let final =
+//           p.views <= 0 ? 0 : (parseInt(p?.likes) / parseInt(p?.views)) * 100;
+//         eng.push(final);
+//       });
+
+//       let sum = 0;
+//       for (let i = 0; i < eng?.length; i++) {
+//         sum += eng[i];
+//       }
+//       let avg = 0;
+
+//       if (eng.length > 0) {
+//         avg = Math.round(sum / eng?.length);
+//       } else {
+//         avg = 0;
+//       }
+
+//       const data = {
+//         username: user?.username,
+//         fullname: user?.fullname,
+//         profilepic: process?.env?.URL + user?.profilepic,
+//         userid: user?._id,
+//         title: community[i]?.title,
+//         type: community[i]?.type,
+//         dp: process?.env?.URL + community[i]?.dp,
+//         topics: community[i]?.topics?.length,
+//         createAt: community[i]?.createdAt,
+//         posts: community[i]?.totalposts,
+//         members: community[i]?.memberscount,
+//         category: community[i]?.category,
+//         id: community[i]?._id,
+//         createdAt: community[i]?.createdAt,
+//         engagement: avg,
+//       };
+
+//       communityData.push(data)
+//     }
+
+//     res.status(200).json({ success: true, communityData })
+
+//   } catch (error) {
+//     res.status(400).json({ success: false, message: "Something Went Wrong!" })
+//     console.log(error)
+//   }
+// }
+
 exports.latestCommunities = async (req, res) => {
   try {
-    const community = await Community?.find()?.sort({ _id: -1 })?.limit(100);
-    const communityData = []
-    for (let i = 0; i < community?.length; i++) {
-      const posts = await Post?.find({ community: community[i]?._id });
-      const user = await User?.findById(community[i].creator)
-
-      let eng = [];
-      await posts.map((p, i) => {
-        let final =
-          p.views <= 0 ? 0 : (parseInt(p?.likes) / parseInt(p?.views)) * 100;
-        eng.push(final);
-      });
-
-      let sum = 0;
-      for (let i = 0; i < eng?.length; i++) {
-        sum += eng[i];
-      }
-      let avg = 0;
-
-      if (eng.length > 0) {
-        avg = Math.round(sum / eng?.length);
-      } else {
-        avg = 0;
-      }
-
-      const data = {
-        username: user?.username,
-        fullname: user?.fullname,
-        profilepic: process?.env?.URL + user?.profilepic,
-        userid: user?._id,
-        title: community[i]?.title,
-        type: community[i]?.type,
-        dp: process?.env?.URL + community[i]?.dp,
-        topics: community[i]?.topics?.length,
-        createAt: community[i]?.createdAt,
-        posts: community[i]?.totalposts,
-        members: community[i]?.memberscount,
-        category: community[i]?.category,
-        id: community[i]?._id,
-        createdAt: community[i]?.createdAt,
-        engagement: avg,
-      };
-
-      communityData.push(data)
+    // Fetch the latest 100 communities
+    const communities = await Community.find().sort({ _id: -1 }).limit(100).lean();
+    if (!communities.length) {
+      return res.status(200).json({ success: true, communityData: [] });
     }
 
-    res.status(200).json({ success: true, communityData })
+    // Extract community and creator IDs
+    const communityIds = communities.map(c => c._id);
+    const creatorIds = communities.map(c => c.creator);
+
+    // Fetch posts for all communities in a single query
+    const posts = await Post.find({ community: { $in: communityIds } }).lean();
+
+    // Fetch all users (community creators) in a single query
+    const users = await User.find({ _id: { $in: creatorIds } }).lean();
+
+    // Calculate engagement and map the data for each community
+    const communityData = communities.map((community) => {
+      // Find the creator (user) for the current community
+      const user = users.find(u => u._id.toString() === community.creator.toString());
+
+      // Find the posts related to the current community
+      const communityPosts = posts.filter(p => p.community.toString() === community._id.toString());
+
+      // Calculate engagement for posts (likes/views ratio)
+      const engagementScores = communityPosts.map(p => (p.views <= 0 ? 0 : (p.likes / p.views) * 100));
+      const avgEngagement = engagementScores.length
+        ? Math.round(engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length)
+        : 0;
+
+      // Construct the community data
+      return {
+        username: user?.username || '',
+        fullname: user?.fullname || '',
+        profilepic: process.env.URL + (user?.profilepic || ''),
+        userid: user?._id,
+        title: community.title,
+        type: community.type,
+        dp: process.env.URL + (community.dp || ''),
+        topics: community?.topics?.length || 0,
+        createAt: community.createdAt,
+        posts: community.totalposts || 0,
+        members: community.memberscount || 0,
+        category: community.category || 'Unknown',
+        id: community._id,
+        createdAt: community.createdAt,
+        engagement: avgEngagement,
+      };
+    });
+
+    // Return the response with the mapped data
+    res.status(200).json({ success: true, communityData });
 
   } catch (error) {
-    res.status(400).json({ success: false, message: "Something Went Wrong!" })
-    console.log(error)
+    console.error(error);
+    res.status(400).json({ success: false, message: "Something went wrong!" });
   }
-}
+};
+
 
 exports.payuser = async (req, res) => {
   try {

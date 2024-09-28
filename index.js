@@ -19,6 +19,7 @@ require("dotenv").config();
 
 // Import routes
 const adminRoutes = require("./routes/admin");
+const prositeRoutes = require("./routes/pros");
 
 // Middlewares
 app.use(cors());
@@ -26,6 +27,7 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 app.use("/api", adminRoutes);
+app.use("/api/v1", prositeRoutes);
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -39,22 +41,6 @@ const connectDB = async () => {
 };
 
 connectDB();
-
-// Socket.io handling
-io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
-
-  // Listen for custom events
-  socket.on("user-added", (data) => {
-    console.log(data)
-    socket.emit("audio-user", data)
-  });
-
-  // Disconnect event
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
-  });
-});
 
 // Start server
 const connectApp = () => {
