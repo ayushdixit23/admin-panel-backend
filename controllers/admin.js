@@ -3317,6 +3317,10 @@ exports.sendcreatordetails = async (req, res) => {
           ),
         ]);
       }
+    }else{
+      creator.userId = checkUser._id
+      userId = checkUser._id
+      await creator.save()
     }
 
     res.status(200).json({ success: true, userId });
