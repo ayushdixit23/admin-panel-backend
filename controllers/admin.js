@@ -3,6 +3,7 @@ const Order = require("../models/orders");
 const Post = require("../models/post");
 const Product = require("../models/product");
 const Community = require("../models/community");
+const Topic = require("../models/topic");
 const uuid = require("uuid").v4;
 const Report = require("../models/reports");
 const Job = require("../models/jobs");
@@ -29,7 +30,7 @@ const Cancellation = require("../models/cancellation");
 const WithdrawRequest = require("../models/WithdrawRequest");
 const Deliveries = require("../models/deliveries");
 const Creator = require("../models/Creator");
-const Collection = require("../models/Collectionss")
+const Collection = require("../models/Collectionss");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -46,7 +47,6 @@ const s3 = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_KEY_WORK,
   },
 });
-
 
 //function to generate a presignedurl of minio
 async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
@@ -460,7 +460,6 @@ async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
 //         reports: await Report.countDocuments(),
 //         jobs: await Job.countDocuments(),
 //         // revenue: await Revenue.find(),
-
 
 //         advertisers: await Advertiser.countDocuments(),
 //         deliverypartners: await DelUser.countDocuments(),
@@ -1946,23 +1945,29 @@ exports.allproductApprovals = async (req, res) => {
 //   }
 // };
 
-
 exports.dashboard = async (req, res) => {
   try {
     // Fetch pending monetization requests
-    const monetization = await Montenziation.find({ status: "pending" }).limit(3).lean();
+    const monetization = await Montenziation.find({ status: "pending" })
+      .limit(3)
+      .lean();
 
     // Return empty arrays if no monetization requests found
 
     // Extract community IDs from monetization data
-    const communityIds = monetization.map(m => m?.community?.toString()).filter(Boolean);
+    const communityIds = monetization
+      .map((m) => m?.community?.toString())
+      .filter(Boolean);
 
     // Fetch community data based on the community IDs
-    const communities = await Community.find({ _id: { $in: communityIds } }).lean();
-
+    const communities = await Community.find({
+      _id: { $in: communityIds },
+    }).lean();
 
     // Extract creator IDs from communities and fetch corresponding users
-    const creatorIds = communities.map(c => c?.creator?.toString()).filter(Boolean);
+    const creatorIds = communities
+      .map((c) => c?.creator?.toString())
+      .filter(Boolean);
     const users = await User.find({ _id: { $in: creatorIds } }).lean();
 
     // Build community data
@@ -1970,37 +1975,46 @@ exports.dashboard = async (req, res) => {
       communities.map(async (comm) => {
         if (!comm) return null; // Ensure community exists
 
-        const user = users.find(u => u?._id.toString() === comm?.creator?.toString());
+        const user = users.find(
+          (u) => u?._id.toString() === comm?.creator?.toString()
+        );
         if (!user) return null; // Ensure user exists
 
         // Fetch posts related to the community
         const posts = await Post.find({ community: comm._id }).lean();
 
         // Calculate engagement (likes/views ratio) for posts
-        const engagementScores = posts.map(p => (p?.views <= 0 ? 0 : (p?.likes / p?.views) * 100));
+        const engagementScores = posts.map((p) =>
+          p?.views <= 0 ? 0 : (p?.likes / p?.views) * 100
+        );
         const avgEngagement = engagementScores.length
-          ? Math.round(engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length)
+          ? Math.round(
+              engagementScores.reduce((sum, score) => sum + score, 0) /
+                engagementScores.length
+            )
           : 0;
 
         // Prepare community data object
         return {
           username: user?.username,
           fullname: user?.fullname,
-          profilepic: process.env.URL + (user?.profilepic || ''),
+          profilepic: process.env.URL + (user?.profilepic || ""),
           userid: user?._id,
-          requested: monetization.find(m => m?.community?.toString() === comm?._id?.toString())?.createdAt,
+          requested: monetization.find(
+            (m) => m?.community?.toString() === comm?._id?.toString()
+          )?.createdAt,
           title: comm?.title,
-          dp: process.env.URL + (comm?.dp || ''),
+          dp: process.env.URL + (comm?.dp || ""),
           topics: comm?.topics?.length || 0,
           posts: comm?.totalposts || 0,
           members: comm?.memberscount || 0,
-          category: comm?.category || 'Unknown',
+          category: comm?.category || "Unknown",
           id: comm?._id,
           createdAt: comm?.createdAt,
           engagement: avgEngagement,
         };
       })
-    ).then(data => data.filter(Boolean)); // Filter out null data
+    ).then((data) => data.filter(Boolean)); // Filter out null data
 
     // Fetch pending requests and map to required structure
     const pendingRequests = await Request.find({ status: "pending" })
@@ -2048,7 +2062,8 @@ exports.dashboard = async (req, res) => {
             pic: process.env.URL + request?.userid?.profilepic,
             address: request?.storeDetails,
             products: actualProducts,
-            documentphoto: process.env.URL + request?.storeDetails?.documentfile,
+            documentphoto:
+              process.env.URL + request?.storeDetails?.documentfile,
             createdAt: request?.createdAt,
             communities: request?.userid?.communitycreated?.length || 0,
           };
@@ -2056,7 +2071,7 @@ exports.dashboard = async (req, res) => {
           return null;
         }
       })
-    ).then(data => data.filter(Boolean)); // Filter out null products
+    ).then((data) => data.filter(Boolean)); // Filter out null products
 
     // Fetch latest 200 users
     const usersList = await User.find().sort({ _id: -1 }).limit(200).lean();
@@ -2064,7 +2079,9 @@ exports.dashboard = async (req, res) => {
     // Map user data with community and store details
     const latestUsersData = await Promise.all(
       usersList.map(async (user) => {
-        const userCommunities = await Community.find({ creator: user._id }).lean();
+        const userCommunities = await Community.find({
+          creator: user._id,
+        }).lean();
         return {
           id: user._id,
           fullname: user.fullname,
@@ -2078,9 +2095,9 @@ exports.dashboard = async (req, res) => {
             title: comm.title,
           })),
           storeCreatedOrNot: user.storeAddress.length > 0 ? "Yes!" : "No!",
-          address: user.address?.streetaddress || '',
-          state: user.address?.state || '',
-          city: user.address?.city || '',
+          address: user.address?.streetaddress || "",
+          state: user.address?.state || "",
+          city: user.address?.city || "",
         };
       })
     );
@@ -2145,7 +2162,7 @@ exports.fetchads = async (req, res) => {
     const adswithmedia = await Promise.all(
       ads.map(async (d) => {
         const advertiser = await Advertiser.findById(d?.advertiserid);
-        const post = await Post.findById(d?.postid)
+        const post = await Post.findById(d?.postid);
         return {
           ...d.toObject(),
           media: process.env.POST_URL + (post?.post[0]?.content || ""),
@@ -2457,9 +2474,9 @@ exports.approveAds = async (req, res) => {
 exports.fetchBanks = async (req, res) => {
   try {
     const approval = await Approvals.find({ type: "bank", status: "pending" });
-    const withdraws = await WithdrawRequest.find({ status: "pending" })
+    const withdraws = await WithdrawRequest.find({ status: "pending" });
 
-    let usersofwithdraws = []
+    let usersofwithdraws = [];
     for (let i = 0; i < withdraws.length; i++) {
       const user = await User.findById(withdraws[i].userid);
       const data = {
@@ -2467,7 +2484,7 @@ exports.fetchBanks = async (req, res) => {
         dp: process.env.URL + user.profilepic,
         username: user.username,
       };
-      usersofwithdraws.push(data)
+      usersofwithdraws.push(data);
     }
 
     const withDraws = withdraws.map((d, i) => ({
@@ -2790,8 +2807,6 @@ exports.approveBank = async (req, res) => {
 //     const post = await Reports.find({ status: "Pending", 'reportedid.what': "Post" });
 //     const conversation = await Reports.find({ status: "Pending", 'reportedid.what': "Conversation" });
 
-
-
 //   } catch (error) {
 //     res.status(400).json({ success: false, message: "Something Went Wrong!" });
 //     console.log(error);
@@ -2800,21 +2815,32 @@ exports.approveBank = async (req, res) => {
 
 exports.forms = async (req, res) => {
   try {
-    const forms = await Form.find()
-    const form = forms.reverse()
-    const url = process.env.PICURL
-    res.status(200).json({ success: true, form, url })
+    const forms = await Form.find();
+    const form = forms.reverse();
+    const url = process.env.PICURL;
+    res.status(200).json({ success: true, form, url });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
-    console.log(error)
+    console.log(error);
   }
-}
+};
 
 exports.formUpload = async (req, res) => {
   try {
-    console.log(req.body, req.file)
-    const { name, batch, phone, email, job, perspective, yourAchievements, careerPlans, experienceUsingGrovyo, message } = req.body
-    const image = req.file
+    console.log(req.body, req.file);
+    const {
+      name,
+      batch,
+      phone,
+      email,
+      job,
+      perspective,
+      yourAchievements,
+      careerPlans,
+      experienceUsingGrovyo,
+      message,
+    } = req.body;
+    const image = req.file;
     const uuidString = uuid();
     const objectName = `${Date.now()}_${uuidString}_${image.originalname}`;
     const result = await s3.send(
@@ -2827,21 +2853,27 @@ exports.formUpload = async (req, res) => {
     );
 
     const form = new Form({
-      name, doc: objectName, batch, phone, email, job, message,
+      name,
+      doc: objectName,
+      batch,
+      phone,
+      email,
+      job,
+      message,
       perspective,
       yourAchievements,
       experienceUsingGrovyo,
       careerPlans,
-    })
+    });
 
-    await form.save()
+    await form.save();
 
-    res.status(200).json({ success: true })
+    res.status(200).json({ success: true });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
-    console.log(error)
+    console.log(error);
   }
-}
+};
 
 exports.cancelao = async (req, res) => {
   try {
@@ -2868,19 +2900,19 @@ exports.cancelao = async (req, res) => {
 
 exports.cancellationrequest = async (req, res) => {
   try {
-    const { userid, orderId } = req.params
-    const { reason } = req.body
+    const { userid, orderId } = req.params;
+    const { reason } = req.body;
     const cancel = new Cancellation({
       userid,
       orderId,
       reason,
-    })
-    await cancel.save()
-    res.status(200).json({ success: true })
+    });
+    await cancel.save();
+    res.status(200).json({ success: true });
   } catch (error) {
-    res.status(400).json({ success: false, message: "Something Went Wrong!" })
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
-}
+};
 
 // exports.latestCommunities = async (req, res) => {
 //   try {
@@ -2941,14 +2973,17 @@ exports.cancellationrequest = async (req, res) => {
 exports.latestCommunities = async (req, res) => {
   try {
     // Fetch the latest 100 communities
-    const communities = await Community.find().sort({ _id: -1 }).limit(100).lean();
+    const communities = await Community.find()
+      .sort({ _id: -1 })
+      .limit(100)
+      .lean();
     if (!communities.length) {
       return res.status(200).json({ success: true, communityData: [] });
     }
 
     // Extract community and creator IDs
-    const communityIds = communities.map(c => c._id);
-    const creatorIds = communities.map(c => c.creator);
+    const communityIds = communities.map((c) => c._id);
+    const creatorIds = communities.map((c) => c.creator);
 
     // Fetch posts for all communities in a single query
     const posts = await Post.find({ community: { $in: communityIds } }).lean();
@@ -2959,31 +2994,40 @@ exports.latestCommunities = async (req, res) => {
     // Calculate engagement and map the data for each community
     const communityData = communities.map((community) => {
       // Find the creator (user) for the current community
-      const user = users.find(u => u._id.toString() === community.creator.toString());
+      const user = users.find(
+        (u) => u._id.toString() === community.creator.toString()
+      );
 
       // Find the posts related to the current community
-      const communityPosts = posts.filter(p => p.community.toString() === community._id.toString());
+      const communityPosts = posts.filter(
+        (p) => p.community.toString() === community._id.toString()
+      );
 
       // Calculate engagement for posts (likes/views ratio)
-      const engagementScores = communityPosts.map(p => (p.views <= 0 ? 0 : (p.likes / p.views) * 100));
+      const engagementScores = communityPosts.map((p) =>
+        p.views <= 0 ? 0 : (p.likes / p.views) * 100
+      );
       const avgEngagement = engagementScores.length
-        ? Math.round(engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length)
+        ? Math.round(
+            engagementScores.reduce((sum, score) => sum + score, 0) /
+              engagementScores.length
+          )
         : 0;
 
       // Construct the community data
       return {
-        username: user?.username || '',
-        fullname: user?.fullname || '',
-        profilepic: process.env.URL + (user?.profilepic || ''),
+        username: user?.username || "",
+        fullname: user?.fullname || "",
+        profilepic: process.env.URL + (user?.profilepic || ""),
         userid: user?._id,
         title: community.title,
         type: community.type,
-        dp: process.env.URL + (community.dp || ''),
+        dp: process.env.URL + (community.dp || ""),
         topics: community?.topics?.length || 0,
         createAt: community.createdAt,
         posts: community.totalposts || 0,
         members: community.memberscount || 0,
-        category: community.category || 'Unknown',
+        category: community.category || "Unknown",
         id: community._id,
         createdAt: community.createdAt,
         engagement: avgEngagement,
@@ -2992,19 +3036,17 @@ exports.latestCommunities = async (req, res) => {
 
     // Return the response with the mapped data
     res.status(200).json({ success: true, communityData });
-
   } catch (error) {
     console.error(error);
     res.status(400).json({ success: false, message: "Something went wrong!" });
   }
 };
 
-
 exports.payuser = async (req, res) => {
   try {
-    const { wid, id } = req.params
-    const user = await User.findById(id)
-    const { amount } = req.body
+    const { wid, id } = req.params;
+    const user = await User.findById(id);
+    const { amount } = req.body;
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -3015,71 +3057,68 @@ exports.payuser = async (req, res) => {
       { $inc: { moneyearned: amount, pendingpayments: -amount } }
     );
 
-    const withDraw = await WithdrawRequest.findById(wid)
+    const withDraw = await WithdrawRequest.findById(wid);
 
-    withDraw.status = "completed"
+    withDraw.status = "completed";
 
-    await withDraw.save()
+    await withDraw.save();
 
-    res.status(200).json({ success: true })
-
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
-}
+};
 
 exports.declinepayuser = async (req, res) => {
   try {
-    const { wid } = req.params
+    const { wid } = req.params;
 
-    const withDraw = await WithdrawRequest.findById(wid)
+    const withDraw = await WithdrawRequest.findById(wid);
 
-    withDraw.status = "rejected"
-    await withDraw.save()
-    res.status(200).json({ success: true })
-
+    withDraw.status = "rejected";
+    await withDraw.save();
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
-}
+};
 
 exports.delusers = async (req, res) => {
   try {
-    const deluser = await DelUser.find({ accstatus: "review" })
-    res.status(200).json({ success: true, deluser, url: process.env.URL })
+    const deluser = await DelUser.find({ accstatus: "review" });
+    res.status(200).json({ success: true, deluser, url: process.env.URL });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false, message: "Something Went Wrong!" })
+    console.log(error);
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
-}
+};
 
 exports.acceptdelusers = async (req, res) => {
   try {
-    const { id } = req.params
-    const deluser = await DelUser.findById(id)
+    const { id } = req.params;
+    const deluser = await DelUser.findById(id);
 
-    deluser.accstatus = "active"
-    await deluser.save()
-    res.status(200).json({ success: true })
+    deluser.accstatus = "active";
+    await deluser.save();
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false, message: "Something Went Wrong!" })
+    console.log(error);
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
-}
-
+};
 
 exports.rejectdelusers = async (req, res) => {
   try {
-    const { id } = req.params
-    const deluser = await DelUser.findById(id)
-    deluser.accstatus = "rejected"
-    await deluser.save()
-    res.status(200).json({ success: true })
+    const { id } = req.params;
+    const deluser = await DelUser.findById(id);
+    deluser.accstatus = "rejected";
+    await deluser.save();
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false, message: "Something Went Wrong!" })
+    console.log(error);
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
   }
-}
+};
 
 exports.deliveriesget = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -3088,7 +3127,10 @@ exports.deliveriesget = async (req, res) => {
 
   try {
     const totalDeliveries = await Deliveries.countDocuments();
-    const deliveries = await Deliveries.find().sort({ _id: -1 }).skip(skip).limit(limit);
+    const deliveries = await Deliveries.find()
+      .sort({ _id: -1 })
+      .skip(skip)
+      .limit(limit);
     const totalPages = Math.ceil(totalDeliveries / limit);
 
     res.json({
@@ -3100,47 +3142,208 @@ exports.deliveriesget = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred while fetching deliveries' });
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching deliveries" });
   }
+};
+
+function createUsername(fullname) {
+  // Convert full name to lowercase and remove spaces
+  let username = fullname.toLowerCase().replace(/\s+/g, "");
+
+  // Generate a random number between 100 and 999
+  let randomNumber = Math.floor(100 + Math.random() * 900);
+
+  // Combine username with random number
+  return `${username}${randomNumber}`;
 }
+
+// exports.sendcreatordetails = async (req, res) => {
+//   try {
+//     const { name, email } = req.body;
+
+//     let userId;
+//     const checkCreator = await Creator.findOne({ email });
+//     if (checkCreator) {
+//       return res
+//         .status(201)
+//         .json({ success: false, message: "You have already sent a request!s" });
+//     } else {
+//       const creator = new Creator({
+//         name,
+//         email,
+//       });
+
+//       const saveC = await creator.save();
+
+//       const checkUser = await User.findOne({ email: email });
+
+//       if (!checkUser) {
+//         const user = new User({
+//           fullname: name,
+//           username: createUsername(name),
+//           profilepic: "male.png",
+//         });
+
+//         await User.updateOne(
+//           { _id: user._id },
+//           {
+//             $push: { activity: newEditCount },
+//             $addToSet: { contacts: contactsfinal },
+//             $set: { notificationtoken: token },
+//           }
+//         );
+
+//         //updating membership
+//         user.ismembershipactive = true;
+//         user.memberships.membership = "65671e5204b7d0d07ef0e796";
+//         user.memberships.ending = "infinite";
+//         user.memberships.status = true;
+//         const savedUser = await user.save();
+//         userId = savedUser._id;
+
+//         const savedCreator = await Creator.findById(saveC._id);
+//         creator.userId = savedUser._id;
+//         await savedCreator.save();
+//         //joining community by default of Grovyo
+//         let comId = "65d313d46a4e4ae4c6eabd15";
+//         let publictopic = [];
+//         const community = await Community.findById(comId);
+//         for (let i = 0; i < community.topics.length; i++) {
+//           const topic = await Topic.findById({ _id: community.topics[i] });
+//           if (topic.type === "free") {
+//             publictopic.push(topic);
+//           }
+//         }
+
+//         await Community.updateOne(
+//           { _id: comId },
+//           { $push: { members: user._id }, $inc: { memberscount: 1 } }
+//         );
+//         await User.updateOne(
+//           { _id: user._id },
+//           { $push: { communityjoined: community._id }, $inc: { totalcom: 1 } }
+//         );
+
+//         const topicIds = publictopic.map((topic) => topic._id);
+
+//         await Topic.updateMany(
+//           { _id: { $in: topicIds } },
+//           {
+//             $push: { members: user._id, notifications: user._id },
+//             $inc: { memberscount: 1 },
+//           }
+//         );
+//         await User.updateMany(
+//           { _id: user._id },
+//           {
+//             $push: { topicsjoined: topicIds },
+//             $inc: { totaltopics: 2 },
+//           }
+//         );
+//       }
+
+//       res.status(200).json({ success: true, userId });
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     res.status(400).json({ success: false });
+//   }
+// };
 
 exports.sendcreatordetails = async (req, res) => {
   try {
-    const { name, email } = req.body
+    const { name, email } = req.body;
 
-    const creator = new Creator({
-      name, email
-    })
+    // Check if the creator already exists
+    const checkCreator = await Creator.findOne({ email }, { _id: 1 }); // Select only the _id
+    if (checkCreator) {
+      return res.status(201).json({ success: false, message: "You have already sent a request!" });
+    }
 
-    await creator.save()
-    res.status(200).json({ success: true })
+    // Create a new Creator
+    const creator = new Creator({ name, email });
+    const saveC = await creator.save();
 
+    // Check if the user already exists
+    const checkUser = await User.findOne({ email }, { _id: 1, fullname: 1, username: 1 }); // Select only necessary fields
+
+    let userId;
+
+    if (!checkUser) {
+      // Create a new User
+      const user = new User({
+        fullname: name,
+        username: createUsername(name),
+        profilepic: "male.png",
+        membership: { membership: "65671e5204b7d0d07ef0e796", ending: "infinite", status: true },
+      });
+
+      const savedUser = await user.save();
+      userId = savedUser._id;
+
+      // Update Creator with userId
+      creator.userId = savedUser._id;
+      await creator.save();
+
+      // Join default community (Grovyo)
+      const comId = "65d313d46a4e4ae4c6eabd15";
+      const community = await Community.findById(comId, { topics: 1 }); // Select only topics
+
+      if (community) {
+        // Join community and update membership count
+        await Community.updateOne(
+          { _id: comId },
+          { $push: { members: userId }, $inc: { memberscount: 1 } }
+        );
+
+        // Get public topics and join them
+        const publicTopics = await Topic.find(
+          { _id: { $in: community.topics }, type: "free" },
+          { _id: 1 } // Only select _id of the topics
+        );
+
+        const topicIds = publicTopics.map((topic) => topic._id);
+
+        await Promise.all([
+          Topic.updateMany(
+            { _id: { $in: topicIds } },
+            { $push: { members: userId, notifications: userId }, $inc: { memberscount: 1 } }
+          ),
+          User.updateOne(
+            { _id: userId },
+            { $push: { communityjoined: community._id, topicsjoined: topicIds }, $inc: { totalcom: 1, totaltopics: topicIds.length } }
+          ),
+        ]);
+      }
+    }
+
+    res.status(200).json({ success: true, userId });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false })
+    console.error(error);
+    res.status(400).json({ success: false });
   }
-}
+};
+
 
 exports.fetchCreators = async (req, res) => {
   try {
-    const creators = await Creator.find()
-    res.status(200).json({ success: true, creators: creators || [] })
+    const creators = await Creator.find();
+    res.status(200).json({ success: true, creators: creators || [] });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false })
+    console.log(error);
+    res.status(400).json({ success: false });
   }
-}
+};
 
 exports.fetchbyQuery = async (req, res) => {
   try {
-    const query = req.query.q || '';
-    const regex = new RegExp(query, 'i');
+    const query = req.query.q || "";
+    const regex = new RegExp(query, "i");
 
     const creators = await Creator.find({
-      $or: [
-        { name: regex },
-        { email: regex }
-      ]
+      $or: [{ name: regex }, { email: regex }],
     });
     res.status(200).json({ success: true, creators: creators || [] });
   } catch (error) {
@@ -3151,81 +3354,88 @@ exports.fetchbyQuery = async (req, res) => {
 
 exports.monitorCreators = async (req, res) => {
   try {
-    const creators = await Creator.find()
-    const creatorEmail = creators.map((d) => d?.email)
+    const creators = await Creator.find();
+    const creatorEmail = creators.map((d) => d?.email);
 
-    const users = []
+    const users = [];
 
     for (let i = 0; i < creatorEmail.length; i++) {
       const user = await User.findOne({ email: creatorEmail[i] })
-        .select("communitycreated communityjoined storeAddress orders -password")
+        .select(
+          "communitycreated communityjoined storeAddress orders -password"
+        )
         .populate("communitycreated")
         .populate("communityjoined")
         .populate("orders");
 
       if (user) {
-        users.push(user)
+        users.push(user);
       }
     }
 
     res.status(200).json({
-      success: true, URL: process.env.URL, users, PRODUCT_URL: process.env.PRODUCT_URL
-    })
-
+      success: true,
+      URL: process.env.URL,
+      users,
+      PRODUCT_URL: process.env.PRODUCT_URL,
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({ success: false });
   }
-}
+};
 
 exports.monitorCreatorsByEmail = async (req, res) => {
-
   try {
-    const { email } = req.body
+    const { email } = req.body;
     const user = await User.findOne({ email })
-      .select("communitycreated fullname username isStoreVerified email phone address profilepic communityjoined storeAddress orders")
+      .select(
+        "communitycreated fullname username isStoreVerified email phone address profilepic communityjoined storeAddress orders"
+      )
       .populate("communitycreated")
       .populate("communityjoined")
       .populate("orders");
 
     res.status(200).json({
-      success: true, URL: process.env.URL, POST_URL: process.env.POST_URL, PRODUCT_URL: process.env.PRODUCT_URL, user
-    })
-
+      success: true,
+      URL: process.env.URL,
+      POST_URL: process.env.POST_URL,
+      PRODUCT_URL: process.env.PRODUCT_URL,
+      user,
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({ success: false });
   }
-}
+};
 
 exports.fetchPosts = async (req, res) => {
   try {
-    const { comId } = req.params
-    const comm = await Community.findById(comId).select("dp title category")
+    const { comId } = req.params;
+    const comm = await Community.findById(comId).select("dp title category");
 
     const community = {
       dp: process.env.URL + comm.dp,
       title: comm.title,
       category: comm.category,
-    }
+    };
 
-    const posts = await Post.find({ community: comId })
+    const posts = await Post.find({ community: comId });
 
-    let dp
-    let video
+    let dp;
+    let video;
 
     const postsdps = await Promise.all(
       posts.map(async (f) => {
         if (f?.post.length === 0) {
-          return null
+          return null;
         }
         if (f?.post[0].type.startsWith("video")) {
-
-          dp = process.env.POST_URL + f?.post[0].content
-          video = true
+          dp = process.env.POST_URL + f?.post[0].content;
+          video = true;
         } else {
-          dp = process.env.POST_URL + f?.post[0].content
-          video = false
+          dp = process.env.POST_URL + f?.post[0].content;
+          video = false;
         }
 
         return { dp, video };
@@ -3235,19 +3445,18 @@ exports.fetchPosts = async (req, res) => {
       return {
         ...f.toObject(),
         dps: postsdps[i].dp,
-        video: postsdps[i].video
+        video: postsdps[i].video,
       };
     });
 
-    const postmerged = po.reverse()
+    const postmerged = po.reverse();
 
-    res.status(200).json({ success: true, posts: postmerged, community })
-
+    res.status(200).json({ success: true, posts: postmerged, community });
   } catch (error) {
     res.status(400).json({ success: false });
-    console.log(error)
+    console.log(error);
   }
-}
+};
 
 exports.fetchProductsByCollection = async (req, res) => {
   try {
@@ -3256,24 +3465,30 @@ exports.fetchProductsByCollection = async (req, res) => {
     const user = await User.findById(id);
 
     if (!user) {
-      return res.status(203).json({ success: false, message: "User Not Found!" });
+      return res
+        .status(203)
+        .json({ success: false, message: "User Not Found!" });
     }
 
     const collectionIds = user.collectionss;
 
     const collections = await Promise.all(
       collectionIds.map(async (collectionId) => {
-        const collection = await Collection.findById(collectionId._id)
-          .populate({
+        const collection = await Collection.findById(collectionId._id).populate(
+          {
             path: "products",
-            select: "name brandname quantity price discountedprice images itemsold isverified",
-          });
+            select:
+              "name brandname quantity price discountedprice images itemsold isverified",
+          }
+        );
 
         return {
           ...collection.toObject(),
           products: collection?.products.map((product) => ({
             ...product.toObject(),
-            imageUrl: product?.images.map((image) => process.env.PRODUCT_URL + image?.content),
+            imageUrl: product?.images.map(
+              (image) => process.env.PRODUCT_URL + image?.content
+            ),
           })),
         };
       })
@@ -3286,17 +3501,16 @@ exports.fetchProductsByCollection = async (req, res) => {
   }
 };
 
-
 exports.fetchBuyOrders = async (req, res) => {
   try {
-    const { id } = req.params
-    const order = await Order.find({ buyerId: id })
-    res.status(200).json({ success: true, order })
+    const { id } = req.params;
+    const order = await Order.find({ buyerId: id });
+    res.status(200).json({ success: true, order });
   } catch (error) {
-    console.log(error)
-    res.status(400).json({ success: false })
+    console.log(error);
+    res.status(400).json({ success: false });
   }
-}
+};
 
 exports.fetchOrdersSell = async (req, res) => {
   try {
