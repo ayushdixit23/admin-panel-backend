@@ -53,6 +53,10 @@ const {
   fetchProductsByCollection,
   fetchBuyOrders,
   fetchOrdersSell,
+  givePassword,
+  getUserfromLocal,
+  fetchCommunity,
+  deletePost,
 
 } = require("../controllers/admin");
 const router = express.Router();
@@ -118,5 +122,9 @@ router.get("/fetchPosts/:comId", fetchPosts)
 router.get("/fetchProductsByCollection/:id", fetchProductsByCollection)
 router.get("/fetchBuyOrders/:id", fetchBuyOrders)
 router.get("/fetchOrdersSeller/:id", fetchOrdersSell)
+router.post("/givePassword", givePassword)
+router.post("/getUserfromLocal", getUserfromLocal)
+router.get("/fetchCommunity/:id", fetchCommunity)
+router.post("/deletePost", deletePost)
 
 module.exports = router;

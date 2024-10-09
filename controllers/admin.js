@@ -556,9 +556,25 @@ const encryptaes = async (data) => {
   }
 };
 
+const decryptaes = (data) => {
+  try {
+    const encryptedBytes = aesjs.utils.hex.toBytes(data);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(
+      JSON.parse(process.env.key),
+      new aesjs.Counter(5)
+    );
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+    return decryptedText;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 function generateAccessToken(data) {
   const access_token = jwt.sign(data, process.env.MY_SECRET_KEY, {
-    expiresIn: "1h",
+    expiresIn: "10d",
   });
   return access_token;
 }
@@ -3259,7 +3275,9 @@ exports.sendcreatordetails = async (req, res) => {
     // Check if the creator already exists
     const checkCreator = await Creator.findOne({ email }, { _id: 1 }); // Select only the _id
     if (checkCreator) {
-      return res.status(201).json({ success: false, message: "You have already sent a request!" });
+      return res
+        .status(201)
+        .json({ success: false, message: "You have already sent a request!" });
     }
 
     // Create a new Creator
@@ -3267,7 +3285,10 @@ exports.sendcreatordetails = async (req, res) => {
     const saveC = await creator.save();
 
     // Check if the user already exists
-    const checkUser = await User.findOne({ email }, { _id: 1, fullname: 1, username: 1 }); // Select only necessary fields
+    const checkUser = await User.findOne(
+      { email },
+      { _id: 1, fullname: 1, username: 1 }
+    ); // Select only necessary fields
 
     let userId;
 
@@ -3277,7 +3298,11 @@ exports.sendcreatordetails = async (req, res) => {
         fullname: name,
         username: createUsername(name),
         profilepic: "male.png",
-        membership: { membership: "65671e5204b7d0d07ef0e796", ending: "infinite", status: true },
+        membership: {
+          membership: "65671e5204b7d0d07ef0e796",
+          ending: "infinite",
+          status: true,
+        },
       });
 
       const savedUser = await user.save();
@@ -3309,18 +3334,24 @@ exports.sendcreatordetails = async (req, res) => {
         await Promise.all([
           Topic.updateMany(
             { _id: { $in: topicIds } },
-            { $push: { members: userId, notifications: userId }, $inc: { memberscount: 1 } }
+            {
+              $push: { members: userId, notifications: userId },
+              $inc: { memberscount: 1 },
+            }
           ),
           User.updateOne(
             { _id: userId },
-            { $push: { communityjoined: community._id, topicsjoined: topicIds }, $inc: { totalcom: 1, totaltopics: topicIds.length } }
+            {
+              $push: { communityjoined: community._id, topicsjoined: topicIds },
+              $inc: { totalcom: 1, totaltopics: topicIds.length },
+            }
           ),
         ]);
       }
-    }else{
-      creator.userId = checkUser._id
-      userId = checkUser._id
-      await creator.save()
+    } else {
+      creator.userId = checkUser._id;
+      userId = checkUser._id;
+      await creator.save();
     }
 
     res.status(200).json({ success: true, userId });
@@ -3329,7 +3360,6 @@ exports.sendcreatordetails = async (req, res) => {
     res.status(400).json({ success: false });
   }
 };
-
 
 exports.fetchCreators = async (req, res) => {
   try {
@@ -3597,3 +3627,130 @@ exports.fetchOrdersSell = async (req, res) => {
 // }
 
 // otpFromGrovyo("65b68725750001cd4dc81483")
+
+exports.givePassword = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    const user = await User.find({
+      $or: [
+        { email: { $regex: new RegExp(text, "i") } },    // Case-insensitive for email
+        { fullname: { $regex: new RegExp(text, "i") } }, // Case-insensitive for fullname
+        { username: { $regex: new RegExp(text, "i") } }  // Case-insensitive for username
+      ]
+    }).select("email passw profilepic fullname username");
+    if (!user) {
+      return res
+        .status(203)
+        .json({ success: false, message: "Wrong Crenditials!" });
+    }
+
+    const data =[]
+
+    if( user &&user?.length>0){
+      for(let i=0;i<user.length;i++){
+        const userData = {
+          id:user[i]._id,
+          fullname: user[i].fullname,
+          dp: process.env.URL + user[i].profilepic,
+          password: decryptaes(user[i].passw),
+          username: user[i].username,
+        };
+  
+        data.push(userData)
+      }
+     
+  
+      res.status(200).json({ success: true, data });
+    }else{
+      res.status(200).json({ success: false, data,message:"No user found for input!" });
+    }
+
+   
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
+    console.log(error);
+  }
+};
+
+exports.getUserfromLocal = async (req, res) => {
+  try {
+    const { stringifyIds } = req.body;
+
+    const ids = JSON.parse(stringifyIds) || [];
+
+    const data = [];
+    if (ids.length > 0) {
+      for (let i = 0; i < ids.length; i++) {
+        const user = await User.findById(ids[i]).select(
+          "username fullname profilepic"
+        );
+        const userData = {
+          id:user._id,
+          fullname: user.fullname,
+          dp: process.env.URL + user.profilepic,
+          username: user.username,
+        };
+
+        data.push(userData);
+      }
+    }
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something Went Wrong!" });
+    console.log(error);
+  }
+};
+
+exports.fetchCommunity = async(req,res)=>{
+  try {
+    const {id} = req.params
+    const community = await Community.find({creator:id}).select("dp title")
+    const data = [];
+    if (community.length > 0) {
+      for (let i = 0; i < community.length; i++) {
+       
+        const communityData = {
+          id:community[i]._id,
+
+         title:community[i].title,
+         dps:process.env.URL+ community[i].dp
+        };
+        data.push(communityData);
+      }
+    }
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    res.status(400).json({success:false})
+    console.log(error)
+  }
+}
+
+exports.deletePost = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    // Find the post by ID
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    // Find the community associated with the post
+    const community = await Community.findById(post.community);
+    if (!community) {
+      return res.status(404).json({ success: false, message: 'Community not found' });
+    }
+
+    // Remove the post reference from the community
+    await Community.updateOne({ _id: community._id }, { $pull: { posts: post._id } });
+
+    // Delete the post
+    await Post.findByIdAndDelete(id);
+
+    res.status(200).json({ success: true, message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
