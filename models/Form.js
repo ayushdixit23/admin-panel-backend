@@ -12,6 +12,6 @@ const formScehma = new mongoose.Schema({
 	experienceUsingGrovyo: String,
 	careerPlans: String,
 	message: String
-})
+},{timestamps:true})
 
 module.exports = mongoose.model("Form", formScehma)

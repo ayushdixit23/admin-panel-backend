@@ -2838,17 +2838,81 @@ exports.approveBank = async (req, res) => {
 //   }
 // }
 
+// exports.forms = async (req, res) => {
+//   try {
+//     const forms = await Form.find();
+//     let reversedForms = forms.reverse(); // Use a different name to avoid reassignment issues
+
+//     const updateObject = [];
+
+//     for (let i = 0; i < reversedForms.length; i++) {
+//       let url;
+//       const formDate = new Date(reversedForms[i].createdAt);
+//       const compareDate = new Date("2024-10-10"); // Use correct Date format for comparison
+
+//       if (formDate > compareDate) {
+//         url = process.env.WORKSPACE_URL+reversedForms[i].doc;
+//       } else {
+//         url = process.env.PICURL+reversedForms[i].doc;
+//       }
+
+//       const updatedForm = {
+//         ...reversedForms[i].toObject(),
+//         url,
+//       };
+
+//       updateObject.push(updatedForm);
+//     }
+
+//     console.log(updateObject)
+
+//     res.status(200).json({ success: true, form: updateObject }); // Correct response object (forms)
+//   } catch (error) {
+//     res.status(400).json({ success: false, message: "Something Went Wrong!" });
+//     console.log(error);
+//   }
+// };
+
 exports.forms = async (req, res) => {
   try {
     const forms = await Form.find();
-    const form = forms.reverse();
-    const url = process.env.PICURL;
-    res.status(200).json({ success: true, form, url });
+    let reversedForms = forms.reverse();
+
+    const updateObject = [];
+
+    for (let i = 0; i < reversedForms.length; i++) {
+      let url;
+      const doc = reversedForms[i].doc;
+      
+      // Check if the document has a '.pdf' extension
+      const isPdf = doc.toLowerCase().endsWith('.pdf');
+
+      // Create the URL based on whether the document is a PDF
+      if (isPdf) {
+        url = process.env.WORKSPACE_URL + doc;
+      } else {
+        url = process.env.PICURL + doc;
+      }
+
+      // Update the form object and add the `isPdf` property
+      const updatedForm = {
+        ...reversedForms[i].toObject(),
+        url,
+        isPdf,  // Add the isPdf property (true if PDF, false otherwise)
+      };
+
+      updateObject.push(updatedForm);
+    }
+
+  
+
+    res.status(200).json({ success: true, form: updateObject });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
     console.log(error);
   }
 };
+
 
 exports.formUpload = async (req, res) => {
   try {
