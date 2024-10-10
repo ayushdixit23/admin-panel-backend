@@ -40,13 +40,22 @@ const minioClient = new Minio.Client({
   secretKey: "shreyansh379",
 });
 
+// const s3 = new S3Client({
+//   region: process.env.BUCKET_REGION,
+//   credentials: {
+//     accessKeyId: process.env.AWS_ACCESS_KEY_WORK,
+//     secretAccessKey: process.env.AWS_SECRET_KEY_WORK,
+//   },
+// });
+
 const s3 = new S3Client({
-  region: process.env.BUCKET_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_WORK,
-    secretAccessKey: process.env.AWS_SECRET_KEY_WORK,
-  },
+	region: process.env.BUCKET_REGION,
+	credentials: {
+		accessKeyId: process.env.AWS_ACCESS_KEY,
+		secretAccessKey: process.env.AWS_SECRET_KEY,
+	},
 });
+
 
 //function to generate a presignedurl of minio
 async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
