@@ -3371,7 +3371,7 @@ exports.sendcreatordetails = async (req, res) => {
         fullname: name,
         username: createUsername(name),
         profilepic: "male.png",
-        membership: {
+        memberships: {
           membership: "65671e5204b7d0d07ef0e796",
           ending: "infinite",
           status: true,
