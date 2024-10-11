@@ -3369,6 +3369,8 @@ exports.sendcreatordetails = async (req, res) => {
       // Create a new User
       const user = new User({
         fullname: name,
+        email,
+        passw:encryptaes("12345678"),
         username: createUsername(name),
         profilepic: "male.png",
         memberships: {
