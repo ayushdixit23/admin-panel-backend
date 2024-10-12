@@ -606,6 +606,14 @@ function generateRefreshToken(data) {
 
 // pass()
 
+const getProfilePic = (user)=>{
+  if(user.gr==3){
+return  user.profilepic
+  }else{
+    return process.env.URL + user.profilepic
+  }
+}
+
 exports.adminlogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -636,7 +644,7 @@ exports.adminlogin = async (req, res) => {
         id: user._id,
         fullname: user.fullname,
         username: user.username,
-        pic: process.env.URL + user.profilepic,
+        pic: getProfilePic(user),
       };
 
       const access_token = generateAccessToken(data);
@@ -686,7 +694,7 @@ exports.refresh = async (req, res) => {
           //   60 * 60
           // );
 
-          const dp = process.env.URL + user.profilepic;
+          const dp = getProfilePic(user);
           if (!user) {
             return res
               .status(400)
@@ -746,7 +754,7 @@ exports.getCommunitiesforMon = async (req, res) => {
       const data = {
         username: user.username,
         fullname: user.fullname,
-        profilepic: process.env.URL + user.profilepic,
+        profilepic: getProfilePic(user),
         userid: user._id,
         requested: mon?.createdAt,
         title: comm.title,
@@ -885,7 +893,7 @@ exports.approveStoreofUser = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -1019,7 +1027,7 @@ exports.approveStoreofUser = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -1255,7 +1263,7 @@ exports.productApproval = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -1390,7 +1398,7 @@ exports.productApproval = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -1558,7 +1566,7 @@ exports.allproductApprovals = async (req, res) => {
           members: { $all: [user?._id, workspace._id] },
         });
         const senderpic = process.env.URL + workspace.profilepic;
-        const recpic = process.env.URL + user.profilepic;
+        const recpic = getProfilePic(user);
         const timestamp = `${new Date()}`;
         const mesId = msgid();
 
@@ -1697,7 +1705,7 @@ exports.allproductApprovals = async (req, res) => {
           members: { $all: [user?._id, workspace._id] },
         });
         const senderpic = process.env.URL + workspace.profilepic;
-        const recpic = process.env.URL + user.profilepic;
+        const recpic = getProfilePic(user);
         const timestamp = `${new Date()}`;
         const mesId = msgid();
 
@@ -2023,7 +2031,7 @@ exports.dashboard = async (req, res) => {
         return {
           username: user?.username,
           fullname: user?.fullname,
-          profilepic: process.env.URL + (user?.profilepic || ""),
+          profilepic: getProfilePic(user),
           userid: user?._id,
           requested: monetization.find(
             (m) => m?.community?.toString() === comm?._id?.toString()
@@ -2111,7 +2119,7 @@ exports.dashboard = async (req, res) => {
           id: user._id,
           fullname: user.fullname,
           username: user.username,
-          profilepic: process.env.URL + user.profilepic,
+          profilepic: getProfilePic(user),
           email: user.email,
           phone: user.phone,
           totalCommunities: user.communitycreated?.length || 0,
@@ -2230,7 +2238,7 @@ exports.approveAds = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -2366,7 +2374,7 @@ exports.approveAds = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -2506,7 +2514,7 @@ exports.fetchBanks = async (req, res) => {
       const user = await User.findById(withdraws[i].userid);
       const data = {
         fullname: user.fullname,
-        dp: process.env.URL + user.profilepic,
+        dp: getProfilePic(user),
         username: user.username,
       };
       usersofwithdraws.push(data);
@@ -2522,7 +2530,7 @@ exports.fetchBanks = async (req, res) => {
       const user = await User.findById(approval[i].id);
       const data = {
         fullname: user.fullname,
-        dp: process.env.URL + user.profilepic,
+        dp: getProfilePic(user),
         username: user.username,
       };
       users.push(data);
@@ -2561,7 +2569,7 @@ exports.approveBank = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -2697,7 +2705,7 @@ exports.approveBank = async (req, res) => {
         members: { $all: [user?._id, workspace._id] },
       });
       const senderpic = process.env.URL + workspace.profilepic;
-      const recpic = process.env.URL + user.profilepic;
+      const recpic = getProfilePic(user);
       const timestamp = `${new Date()}`;
       const mesId = msgid();
 
@@ -3370,7 +3378,7 @@ exports.sendcreatordetails = async (req, res) => {
       const user = new User({
         fullname: name,
         email,
-        passw:encryptaes("12345678"),
+        passw:await encryptaes("12345678"),
         username: createUsername(name),
         profilepic: "male.png",
         memberships: {
@@ -3727,7 +3735,7 @@ exports.givePassword = async (req, res) => {
         const userData = {
           id:user[i]._id,
           fullname: user[i].fullname,
-          dp: process.env.URL + user[i].profilepic,
+          dp: getProfilePic(user[i]),
           password: decryptaes(user[i].passw),
           username: user[i].username,
         };
@@ -3763,7 +3771,7 @@ exports.getUserfromLocal = async (req, res) => {
         const userData = {
           id:user._id,
           fullname: user.fullname,
-          dp: process.env.URL + user.profilepic,
+          dp: getProfilePic(user),
           username: user.username,
         };
 
