@@ -49,13 +49,12 @@ const minioClient = new Minio.Client({
 // });
 
 const s3 = new S3Client({
-	region: process.env.BUCKET_REGION,
-	credentials: {
-		accessKeyId: process.env.AWS_ACCESS_KEY,
-		secretAccessKey: process.env.AWS_SECRET_KEY,
-	},
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
 });
-
 
 //function to generate a presignedurl of minio
 async function generatePresignedUrl(bucketName, objectName, expiry = 604800) {
@@ -606,13 +605,13 @@ function generateRefreshToken(data) {
 
 // pass()
 
-const getProfilePic = (user)=>{
-  if(user.gr==3){
-return  user.profilepic
-  }else{
-    return process.env.URL + user.profilepic
+const getProfilePic = (user) => {
+  if (user.gr == 3) {
+    return user.profilepic;
+  } else {
+    return process.env.URL + user.profilepic;
   }
-}
+};
 
 exports.adminlogin = async (req, res) => {
   try {
@@ -2891,9 +2890,9 @@ exports.forms = async (req, res) => {
     for (let i = 0; i < reversedForms.length; i++) {
       let url;
       const doc = reversedForms[i].doc;
-      
+
       // Check if the document has a '.pdf' extension
-      const isPdf = doc.toLowerCase().endsWith('.pdf');
+      const isPdf = doc.toLowerCase().endsWith(".pdf");
 
       // Create the URL based on whether the document is a PDF
       if (isPdf) {
@@ -2906,13 +2905,11 @@ exports.forms = async (req, res) => {
       const updatedForm = {
         ...reversedForms[i].toObject(),
         url,
-        isPdf,  // Add the isPdf property (true if PDF, false otherwise)
+        isPdf, // Add the isPdf property (true if PDF, false otherwise)
       };
 
       updateObject.push(updatedForm);
     }
-
-  
 
     res.status(200).json({ success: true, form: updateObject });
   } catch (error) {
@@ -2920,7 +2917,6 @@ exports.forms = async (req, res) => {
     console.log(error);
   }
 };
-
 
 exports.formUpload = async (req, res) => {
   try {
@@ -3378,7 +3374,7 @@ exports.sendcreatordetails = async (req, res) => {
       const user = new User({
         fullname: name,
         email,
-        passw:await encryptaes("12345678"),
+        passw: await encryptaes("12345678"),
         username: createUsername(name),
         profilepic: "male.png",
         memberships: {
@@ -3717,39 +3713,34 @@ exports.givePassword = async (req, res) => {
 
     const user = await User.find({
       $or: [
-        { email: { $regex: new RegExp(text, "i") } },    // Case-insensitive for email
+        { email: { $regex: new RegExp(text, "i") } }, // Case-insensitive for email
         { fullname: { $regex: new RegExp(text, "i") } }, // Case-insensitive for fullname
-        { username: { $regex: new RegExp(text, "i") } }  // Case-insensitive for username
-      ]
-    }).select("email passw profilepic fullname username");
+        { username: { $regex: new RegExp(text, "i") } }, // Case-insensitive for username
+      ],
+    })
+      .select("email passw profilepic fullname username")
+      .limit(20);
     if (!user) {
       return res
         .status(203)
         .json({ success: false, message: "Wrong Crenditials!" });
     }
 
-    const data =[]
-
-    if( user &&user?.length>0){
-      for(let i=0;i<user.length;i++){
-        const userData = {
-          id:user[i]._id,
-          fullname: user[i].fullname,
-          dp: getProfilePic(user[i]),
-          password: decryptaes(user[i].passw),
-          username: user[i].username,
-        };
-  
-        data.push(userData)
-      }
-     
-  
-      res.status(200).json({ success: true, data });
-    }else{
-      res.status(200).json({ success: false, data,message:"No user found for input!" });
+    if (!user || user.length === 0) {
+      return res
+        .status(200)
+        .json({ success: false, message: "No user found for input!" });
     }
 
-   
+    const data = user.map((u) => ({
+      id: u._id,
+      fullname: u.fullname,
+      dp: getProfilePic(u),
+      password: decryptaes(u.passw),
+      username: u.username,
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
     console.log(error);
@@ -3769,7 +3760,7 @@ exports.getUserfromLocal = async (req, res) => {
           "username fullname profilepic"
         );
         const userData = {
-          id:user._id,
+          id: user._id,
           fullname: user.fullname,
           dp: getProfilePic(user),
           username: user.username,
@@ -3785,29 +3776,28 @@ exports.getUserfromLocal = async (req, res) => {
   }
 };
 
-exports.fetchCommunity = async(req,res)=>{
+exports.fetchCommunity = async (req, res) => {
   try {
-    const {id} = req.params
-    const community = await Community.find({creator:id}).select("dp title")
+    const { id } = req.params;
+    const community = await Community.find({ creator: id }).select("dp title");
     const data = [];
     if (community.length > 0) {
       for (let i = 0; i < community.length; i++) {
-       
         const communityData = {
-          id:community[i]._id,
+          id: community[i]._id,
 
-         title:community[i].title,
-         dps:process.env.URL+ community[i].dp
+          title: community[i].title,
+          dps: process.env.URL + community[i].dp,
         };
         data.push(communityData);
       }
     }
     res.status(200).json({ success: true, data });
   } catch (error) {
-    res.status(400).json({success:false})
-    console.log(error)
+    res.status(400).json({ success: false });
+    console.log(error);
   }
-}
+};
 
 exports.deletePost = async (req, res) => {
   try {
@@ -3816,24 +3806,173 @@ exports.deletePost = async (req, res) => {
     // Find the post by ID
     const post = await Post.findById(id);
     if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
     }
 
     // Find the community associated with the post
     const community = await Community.findById(post.community);
     if (!community) {
-      return res.status(404).json({ success: false, message: 'Community not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Community not found" });
     }
 
     // Remove the post reference from the community
-    await Community.updateOne({ _id: community._id }, { $pull: { posts: post._id } });
+    await Community.updateOne(
+      { _id: community._id },
+      { $pull: { posts: post._id } }
+    );
 
     // Delete the post
     await Post.findByIdAndDelete(id);
 
-    res.status(200).json({ success: true, message: 'Post deleted successfully' });
+    res
+      .status(200)
+      .json({ success: true, message: "Post deleted successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Internal Server Error' });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+exports.pushNotificationToUser = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    function msgid() {
+      return Math.floor(100000 + Math.random() * 900000);
+    }
+
+    const user = await User.findOne({ email: "ayush23@gmail.com" });
+    const grovyo = await User.findById("65a666a3e953a4573e6c7ecf");
+    const convs = await Conversation.findOne({
+      members: { $all: [user?._id, grovyo._id] },
+    });
+    const senderpic = process.env.URL + grovyo.profilepic;
+    const recpic = process.env.URL + user.profilepic;
+    const timestamp = `${new Date()}`;
+    const mesId = msgid();
+
+    if (convs) {
+      if (user?.notificationtoken) {
+        let data = {
+          conversationId: convs._id,
+          sender: grovyo._id,
+          text: `${text}`,
+          mesId: mesId,
+        };
+        const m = new Message(data);
+        await m.save();
+
+        const msg = {
+          notification: {
+            title: `Grovyo`,
+            body: `${text}`,
+          },
+          data: {
+            screen: "Conversation",
+            sender_fullname: `${grovyo?.fullname}`,
+            sender_id: `${grovyo?._id}`,
+            text: `${text}`,
+            convId: `${convs?._id}`,
+            createdAt: `${timestamp}`,
+            mesId: `${mesId}`,
+            typ: `message`,
+            senderuname: `${grovyo?.username}`,
+            senderverification: `${grovyo.isverified}`,
+            senderpic: `${senderpic}`,
+            reciever_fullname: `${user.fullname}`,
+            reciever_username: `${user.username}`,
+            reciever_isverified: `${user.isverified}`,
+            reciever_pic: `${recpic}`,
+            reciever_id: `${user._id}`,
+          },
+          token: user?.notificationtoken,
+        };
+
+        await adminnoti
+          .messaging()
+          .send(msg)
+          .then((response) => {
+            console.log("Successfully sent message");
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
+    } else {
+      const conv = new Conversation({
+        members: [grovyo._id, user._id],
+      });
+      const savedconv = await conv.save();
+      let data = {
+        conversationId: conv._id,
+        sender: grovyo._id,
+        text: `${text}`,
+        mesId: mesId,
+      };
+      await User.updateOne(
+        { _id: grovyo._id },
+        {
+          $addToSet: {
+            conversations: savedconv?._id,
+          },
+        }
+      );
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $addToSet: {
+            conversations: savedconv?._id,
+          },
+        }
+      );
+
+      const m = new Message(data);
+      await m.save();
+
+      const msg = {
+        notification: {
+          title: `Grovyo`,
+          body: `${text}`,
+        },
+        data: {
+          screen: "Conversation",
+          sender_fullname: `${grovyo?.fullname}`,
+          sender_id: `${grovyo?._id}`,
+          text: `${text}`,
+          convId: `${convs?._id}`,
+          createdAt: `${timestamp}`,
+          mesId: `${mesId}`,
+          typ: `message`,
+          senderuname: `${grovyo?.username}`,
+          senderverification: `${grovyo.isverified}`,
+          senderpic: `${senderpic}`,
+          reciever_fullname: `${user.fullname}`,
+          reciever_username: `${user.username}`,
+          reciever_isverified: `${user.isverified}`,
+          reciever_pic: `${recpic}`,
+          reciever_id: `${user._id}`,
+        },
+        token: user?.notificationtoken,
+      };
+
+      await adminnoti
+        .messaging()
+        .send(msg)
+        .then((response) => {
+          console.log("Successfully sent message");
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+    }
+
+    res.status(200).json({ success: true, message: "Notificaton Sent!" });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ success: false, message: "Internal Server Error!" });
   }
 };

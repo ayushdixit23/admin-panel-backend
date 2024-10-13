@@ -57,6 +57,7 @@ const {
   getUserfromLocal,
   fetchCommunity,
   deletePost,
+  pushNotificationToUser,
 
 } = require("../controllers/admin");
 const router = express.Router();
@@ -126,5 +127,6 @@ router.post("/givePassword", givePassword)
 router.post("/getUserfromLocal", getUserfromLocal)
 router.get("/fetchCommunity/:id", fetchCommunity)
 router.post("/deletePost", deletePost)
+router.post("/pushNotificationToUser",pushNotificationToUser)
 
 module.exports = router;
