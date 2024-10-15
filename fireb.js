@@ -1,4 +1,4 @@
-const serviceKey = require("./grovyo-89dc2-firebase-adminsdk-pwqju-41deeae515.json");
+const serviceKey = require("./grovyo-89dc2-d7b296da1c78.json");
 const admin = require("firebase-admin");
 
 try {

@@ -31,6 +31,7 @@ const WithdrawRequest = require("../models/WithdrawRequest");
 const Deliveries = require("../models/deliveries");
 const Creator = require("../models/Creator");
 const Collection = require("../models/Collectionss");
+const Token = require("../models/token");
 
 const minioClient = new Minio.Client({
   endPoint: "minio.grovyo.xyz",
@@ -3839,36 +3840,107 @@ exports.deletePost = async (req, res) => {
 
 exports.pushNotificationToUser = async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, title } = req.body;
 
     function msgid() {
       return Math.floor(100000 + Math.random() * 900000);
     }
-
-    const user = await User.findOne({ email: "ayush23@gmail.com" });
     const grovyo = await User.findById("65a666a3e953a4573e6c7ecf");
-    const convs = await Conversation.findOne({
-      members: { $all: [user?._id, grovyo._id] },
-    });
     const senderpic = process.env.URL + grovyo.profilepic;
-    const recpic = process.env.URL + user.profilepic;
-    const timestamp = `${new Date()}`;
-    const mesId = msgid();
+    const noFtokens = await Token.find();
 
-    if (convs) {
-      if (user?.notificationtoken) {
+    // Filter out only the tokens that have both `userid` and `token`
+    const tokens = noFtokens.filter((token) => token.userid && token.token);
+
+    for (let i = 0; i < tokens.length; i++) {
+      const convs = await Conversation.findOne({
+        members: { $all: [tokens[i].userid, grovyo._id] },
+      });
+
+      const timestamp = `${new Date()}`;
+      const mesId = msgid();
+
+      if (convs) {
+        if (tokens[i].token) {
+          let data = {
+            conversationId: convs._id,
+            sender: grovyo._id,
+            text: `${text}`,
+            mesId: mesId,
+          };
+          const m = new Message(data);
+          await m.save();
+
+          const msg = {
+            notification: {
+              title: `${title}`,
+              body: `${text}`,
+            },
+            data: {
+              screen: "Conversation",
+              sender_fullname: `${grovyo?.fullname}`,
+              sender_id: `${grovyo?._id}`,
+              text: `${text}`,
+              convId: `${convs?._id}`,
+              createdAt: `${timestamp}`,
+              mesId: `${mesId}`,
+              typ: `message`,
+              senderuname: `${grovyo?.username}`,
+              senderverification: `${grovyo.isverified}`,
+              senderpic: `${senderpic}`,
+              // reciever_fullname: `${user.fullname}`,
+              // reciever_username: `${user.username}`,
+              // reciever_isverified: `${user.isverified}`,
+              // reciever_pic: `${recpic}`,
+              // reciever_id: `${user._id}`,
+            },
+            token: tokens[i].token,
+          };
+
+          await adminnoti
+            .messaging()
+            .send(msg)
+            .then((response) => {
+              console.log("Successfully sent message");
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
+      } else {
+        const conv = new Conversation({
+          members: [grovyo._id, tokens[i].userid],
+        });
+        const savedconv = await conv.save();
         let data = {
-          conversationId: convs._id,
+          conversationId: conv._id,
           sender: grovyo._id,
           text: `${text}`,
           mesId: mesId,
         };
+        await User.updateOne(
+          { _id: grovyo._id },
+          {
+            $addToSet: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+        await User.updateOne(
+          { _id: tokens[i].userid },
+          {
+            $addToSet: {
+              conversations: savedconv?._id,
+            },
+          }
+        );
+
         const m = new Message(data);
         await m.save();
 
         const msg = {
           notification: {
-            title: `Grovyo`,
+            title: `${title}`,
             body: `${text}`,
           },
           data: {
@@ -3883,13 +3955,13 @@ exports.pushNotificationToUser = async (req, res) => {
             senderuname: `${grovyo?.username}`,
             senderverification: `${grovyo.isverified}`,
             senderpic: `${senderpic}`,
-            reciever_fullname: `${user.fullname}`,
-            reciever_username: `${user.username}`,
-            reciever_isverified: `${user.isverified}`,
-            reciever_pic: `${recpic}`,
-            reciever_id: `${user._id}`,
+            // reciever_fullname: `${user.fullname}`,
+            // reciever_username: `${user.username}`,
+            // reciever_isverified: `${user.isverified}`,
+            // reciever_pic: `${recpic}`,
+            // reciever_id: `${user._id}`,
           },
-          token: user?.notificationtoken,
+          token: tokens[i].token,
         };
 
         await adminnoti
@@ -3902,72 +3974,6 @@ exports.pushNotificationToUser = async (req, res) => {
             console.log("Error sending message:", error);
           });
       }
-    } else {
-      const conv = new Conversation({
-        members: [grovyo._id, user._id],
-      });
-      const savedconv = await conv.save();
-      let data = {
-        conversationId: conv._id,
-        sender: grovyo._id,
-        text: `${text}`,
-        mesId: mesId,
-      };
-      await User.updateOne(
-        { _id: grovyo._id },
-        {
-          $addToSet: {
-            conversations: savedconv?._id,
-          },
-        }
-      );
-      await User.updateOne(
-        { _id: user._id },
-        {
-          $addToSet: {
-            conversations: savedconv?._id,
-          },
-        }
-      );
-
-      const m = new Message(data);
-      await m.save();
-
-      const msg = {
-        notification: {
-          title: `Grovyo`,
-          body: `${text}`,
-        },
-        data: {
-          screen: "Conversation",
-          sender_fullname: `${grovyo?.fullname}`,
-          sender_id: `${grovyo?._id}`,
-          text: `${text}`,
-          convId: `${convs?._id}`,
-          createdAt: `${timestamp}`,
-          mesId: `${mesId}`,
-          typ: `message`,
-          senderuname: `${grovyo?.username}`,
-          senderverification: `${grovyo.isverified}`,
-          senderpic: `${senderpic}`,
-          reciever_fullname: `${user.fullname}`,
-          reciever_username: `${user.username}`,
-          reciever_isverified: `${user.isverified}`,
-          reciever_pic: `${recpic}`,
-          reciever_id: `${user._id}`,
-        },
-        token: user?.notificationtoken,
-      };
-
-      await adminnoti
-        .messaging()
-        .send(msg)
-        .then((response) => {
-          console.log("Successfully sent message");
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
     }
 
     res.status(200).json({ success: true, message: "Notificaton Sent!" });
@@ -3976,3 +3982,41 @@ exports.pushNotificationToUser = async (req, res) => {
     res.status(400).json({ success: false, message: "Internal Server Error!" });
   }
 };
+
+const findUser = async () => {
+
+  //   // Fetch the first 12,000 users only
+  //   const users = await User.find().limit(12000);
+
+  //   console.log(`Found ${users.length} users.`);
+
+  //   // Iterate over the users and save the token for each user
+  //   for (let i = 0; i < users.length; i++) {
+  //     console.log(`Processing user ${i + 1} of ${users.length}`);
+
+  //     const token = new Token({
+  //       userid: users[i]._id,
+  //       token: users[i].notificationtoken
+  //         ? users[i].notificationtoken
+  //         : undefined,
+  //     });
+
+  //     await token.save(); // Save the token for the current user
+  //   }
+
+  //   console.log("All tokens saved successfully.");
+  // } catch (error) {
+  //   console.error(
+  //     "Error occurred while finding users or saving tokens:",
+  //     error
+  //   );
+  // }
+
+  const noFtokens = await Token.find();
+
+  // Filter out only the tokens that have both `userid` and `token`
+  const tokens = noFtokens.filter((token) => token.userid && token.token);
+console.log(tokens.length)
+}
+
+// findUser();
