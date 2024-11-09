@@ -12,7 +12,7 @@ const AdsSchema = new mongoose.Schema(
     startdate: { type: String },
     enddate: { type: String },
     goal: { type: String },
-    category: { type: String },
+    category: { type: [String] },
     cta: { type: String },
     ctalink: { type: String },
     content: [{ extension: { type: String }, name: { type: String } }],
