@@ -12,7 +12,7 @@ const AdsSchema = new mongoose.Schema(
     startdate: { type: String },
     enddate: { type: String },
     goal: { type: String },
-    category: { type: [String] },
+    category: { type: Array },
     cta: { type: String },
     ctalink: { type: String },
     content: [{ extension: { type: String }, name: { type: String } }],
@@ -33,9 +33,9 @@ const AdsSchema = new mongoose.Schema(
     }],
     dailybudget: { type: Number },
     audiencesize: { type: Number },
-    category: { type: String },
+   
     transactions: [{ type: ObjectId, ref: "AdTransactions" }],
-    adid: { type: String, required: true },
+   
     editcount: [
       {
         date: { type: String, default: Date.now().toString() },
