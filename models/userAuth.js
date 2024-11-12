@@ -13,7 +13,10 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     passw: { type: String },
-    otp: { type: String },
+    otp: {
+      code: { type: String },
+      time: { type: Date },
+    },
     salt: String,
     governmentid: { type: String },
     role: {
