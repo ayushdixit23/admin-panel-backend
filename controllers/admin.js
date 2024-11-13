@@ -605,7 +605,6 @@ function generateRefreshToken(data) {
 // }
 
 // pass()
-
 const getProfilePic = (user) => {
   if (user.gr == 3) {
     return user.profilepic;
@@ -2511,13 +2510,16 @@ exports.fetchBanks = async (req, res) => {
 
     let usersofwithdraws = [];
     for (let i = 0; i < withdraws.length; i++) {
-      const user = await User.findById(withdraws[i].userid);
-      const data = {
-        fullname: user.fullname,
-        dp: getProfilePic(user),
-        username: user.username,
-      };
-      usersofwithdraws.push(data);
+     
+      const user = await User.findById(withdraws[i]?.userid);
+      if (user) {
+        const data = {
+          fullname: user?.fullname,
+          dp: getProfilePic(user),
+          username: user?.username,
+        };
+        usersofwithdraws.push(data);
+      }
     }
 
     const withDraws = withdraws.map((d, i) => ({
@@ -2526,20 +2528,29 @@ exports.fetchBanks = async (req, res) => {
     }));
 
     let users = [];
-    for (let i = 0; i < approval.length; i++) {
-      const user = await User.findById(approval[i].id);
-      const data = {
-        fullname: user.fullname,
-        dp: getProfilePic(user),
-        username: user.username,
-      };
-      users.push(data);
+    for (let j = 0; j < approval.length; j++) {
+      
+      const user = await User.findById(approval[j].id);
+     
+      if (user) {
+        const data = {
+          fullname: user?.fullname,
+          dp: getProfilePic(user),
+          username: user?.username,
+        };
+        users.push(data);
+      }
     }
     const approv = approval.map((d, i) => ({
       ...d.toObject(),
       user: users[i],
     }));
+
     const approvals = approv.reverse();
+
+    console.log(approvals, withDraws)
+    
+
     res.status(200).json({ success: true, approvals, withDraws });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something Went Wrong!" });
@@ -3985,7 +3996,6 @@ exports.pushNotificationToUser = async (req, res) => {
 };
 
 const findUser = async () => {
-
   //   // Fetch the first 12,000 users only
   //   const users = await User.find().limit(12000);
 
@@ -4017,7 +4027,39 @@ const findUser = async () => {
 
   // Filter out only the tokens that have both `userid` and `token`
   const tokens = noFtokens.filter((token) => token.userid && token.token);
-console.log(tokens.length)
-}
+  console.log(tokens.length);
+};
 
 // findUser();
+
+exports.addmembers = async (req, res) => {
+  try {
+    const { comid, number } = req.params;
+    const numToAdd = parseInt(number, 10);
+
+    const community = await Community.findById(comid);
+    if (!community) {
+      return res.status(400).json({ message: "Community not found", success: false });
+    }
+
+    const existingMemberIds = new Set(community.members.map((member) => member.toString()));
+    const usersToAdd = await User.find({ gr: 3, _id: { $nin: Array.from(existingMemberIds) } })
+      .select("_id")
+      .limit(numToAdd);
+
+    if (usersToAdd.length === 0) {
+      return res.status(404).json({ message: "No eligible users found to add", success: false });
+    }
+
+    const newMemberIds = usersToAdd.map((user) => user._id);
+    community.members.push(...newMemberIds);
+    community.memberscount += newMemberIds.length;
+    await community.save();
+
+    res.status(200).json({ success: true, message: "Members added successfully", addedCount: newMemberIds.length });
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "An error occurred" });
+  }
+};

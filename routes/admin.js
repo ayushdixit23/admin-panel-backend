@@ -58,6 +58,7 @@ const {
   fetchCommunity,
   deletePost,
   pushNotificationToUser,
+  addmembers,
 
 } = require("../controllers/admin");
 const router = express.Router();
@@ -128,5 +129,5 @@ router.post("/getUserfromLocal", getUserfromLocal)
 router.get("/fetchCommunity/:id", fetchCommunity)
 router.post("/deletePost", deletePost)
 router.post("/pushNotificationToUser",pushNotificationToUser)
-
+router.post("/addmembers/:comid/:number",addmembers);
 module.exports = router;
